@@ -7,7 +7,7 @@ from src.utils.common import read_yaml, create_directories
 import tensorflow as tf
 import io
 
-STAGE = "creating base model" ## <<< change stage name 
+STAGE = "creating binary model from scratch" ## <<< change stage name 
 
 logging.basicConfig(
     filename=os.path.join("logs", 'running_logs.log'), 
@@ -16,6 +16,11 @@ logging.basicConfig(
     filemode="a"
     )
 
+def update_even_odd_labels(list_of_labels):
+    for idx, label in enumerate(list_of_labels):
+        even_condition = label%2 == 0
+        list_of_labels[idx] = np.where(even_condition, 1, 0)
+    return list_of_labels
 
 def main(config_path):
     ## read config files
@@ -27,6 +32,8 @@ def main(config_path):
     X_test = X_test / 255.0
     X_valid, X_train = X_train_full[:5000], X_train_full[5000:]
     y_valid, y_train = y_train_full[:5000], y_train_full[5000:]
+
+    y_train_bin, y_test_bin, y_valid_bin = update_even_odd_labels([y_train, y_test, y_valid])
 
     ## set the seeds
     seed = 2021 ## get it from config
@@ -40,7 +47,7 @@ def main(config_path):
           tf.keras.layers.LeakyReLU(), ## alternative way
           tf.keras.layers.Dense(100, name="hiddenlayer2"),
           tf.keras.layers.LeakyReLU(),
-          tf.keras.layers.Dense(10,activation="softmax", name="outputlayer")
+          tf.keras.layers.Dense(2,activation="softmax", name="outputlayer")
     ]
 
     ## define the model and compile it
@@ -61,24 +68,24 @@ def main(config_path):
         return summary_str
 
     # model.summary()
-    logging.info(f"base model summary: \n{_log_model_summary(model)}")
+    logging.info(f"bin_scratch_model summary: \n{_log_model_summary(model)}")
 
     ## Train the model
     history = model.fit(
-        X_train, y_train, 
+        X_train, y_train_bin, 
         epochs=10, 
-        validation_data=(X_valid, y_valid),
+        validation_data=(X_valid, y_valid_bin),
         verbose=2)
 
     ## save the base model - 
     model_dir_path = os.path.join("artifacts","models")
     create_directories([model_dir_path])
 
-    model_file_path = os.path.join(model_dir_path, "base_model.h5")
+    model_file_path = os.path.join(model_dir_path, "bin_scratch_model.h5")
     model.save(model_file_path)
 
-    logging.info(f"base model is saved at {model_file_path}")
-    logging.info(f"evaluation metrics {model.evaluate(X_test, y_test)}")
+    logging.info(f"bin_scratch_model is saved at {model_file_path}")
+    logging.info(f"evaluation metrics {model.evaluate(X_test, y_test_bin)}")
 
 if __name__ == '__main__':
     args = argparse.ArgumentParser()
