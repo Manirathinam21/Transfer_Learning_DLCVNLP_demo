@@ -1,2 +1,0 @@
-# Transfer_Learning_DLCVNLP_demo
-Transfer_Learning_DLCVNLP_demo
